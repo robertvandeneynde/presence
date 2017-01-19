@@ -22,8 +22,8 @@ def find_student(name):
     raise Http404('student not found: ' + name)
 
 def presence(request):
-    #if not request.user.is_staff:
-    #    return HttpResponseForbidden('You must be admin')
+    if not request.user.is_staff:
+        return HttpResponseForbidden('You must be admin')
     
     if request.method == "GET":
         date = request.GET.get('date', timezone.now().date()) # or datetime, anyway string
@@ -62,7 +62,6 @@ def presence(request):
             session.presents.add(student)
     
     # exclude Students student where student is_present session
-    
     absents = session.group.student_set.exclude(session=session)
     presents = session.group.student_set.filter(session=session)
     
@@ -84,20 +83,9 @@ def presence(request):
     ))
 
 def see(request, date):
-    date = date.strip() or timezone.now().date()
-    try:
-        session = Session.objects.get(beg__startswith=date)
-    except Session.DoesNotExist:
-        session = Session.objects.filter(beg__lt=date).order_by('-beg')[0]
+    if not request.user.is_staff:
+        return HttpResponseForbidden('You must be admin')
     
-    return render(request, A('see_session.html'), dict(
-        session = session,
-        presents = session.group.student_set.filter(session=session),
-        absents = session.group.student_set.exclude(session=session),
-        additionals = session.presents.exclude(group=session.group),
-    ))
-
-def see(request, date):
     date = date.strip() or timezone.now().date()
     try:
         session = Session.objects.get(beg__startswith=date)
@@ -112,6 +100,8 @@ def see(request, date):
     ))
 
 def feuille(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden('You must be admin')
     
     groups = list(Group.objects.order_by('pk'))
     sessions = [group.session_set.order_by('beg') for group in groups]
