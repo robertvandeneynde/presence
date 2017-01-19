@@ -5,28 +5,32 @@
         <title>Présences parascolaire</title>
     </head>
     <body>
-        <h1>Groupe {{ name_of_group }}</h1>
+        <h1>Groupe {{ group.name }} - {{ date }}</h1>
         
         <form method="post" action="">
         
         {% csrf_token %}
         
         {% for s in students %}
-        <p>
+        <div>
             <label>
                 <input type="checkbox" name="name" value="{{ s.pk }}" />
                 {{ s.get_full_name }}
             </label>
-        </p>
+        </div>
         {% endfor %}
         
         <h2>Élèves additionnels</h2>
-        <p><input type="text" name="name" /></p>
-        <p><input type="text" name="name" /></p>
-        <p><input type="text" name="name" /></p>
-        <p><input type="text" name="name" /></p>
+        <p>
+            <input type="text" name="name" />
+            <input type="text" name="name" />
+            <input type="text" name="name" />
+            <input type="text" name="name" />
+        </p>
         
         <p><input type="submit" /></p>
+        
+        <p><input type="hidden" name="date" value="{{ date }}" /></p>
         
         </form>
         

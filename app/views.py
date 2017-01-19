@@ -4,6 +4,7 @@ from django.http import (HttpResponse,
     HttpResponseRedirect, Http404)
 
 from django.utils import timezone
+from django.db import transaction
 
 from datetime import timedelta, datetime
 
@@ -24,25 +25,31 @@ def presence(request):
     #if not request.user.is_staff:
     #    return HttpResponseForbidden('You must be admin')
     
-    if request.method != "POST":
-        # session = get404(Session, beg__startswith=timezone.now().date())
+    if request.method == "GET":
+        date = request.GET.get('date', timezone.now().date()) # or datetime, anyway string
+        session = get404(Session, beg__startswith=date)
         
         return render(request, A('presence.html'), dict(
-            # name_of_group=session.group.name,
-            # students=session.group.student_set.all().order_by('first_name', 'last_name')))
-            name_of_group='Lundi',
-            students=[Student(first_name='marco', pk=2), Student(first_name='polo', pk=7)],
+            group=session.group,
+            students=session.group.student_set.all().order_by('first_name', 'last_name'),
+            date=date,
+            # name_of_group='Lundi',
+            # students=[Student(first_name='marco', pk=2), Student(first_name='polo', pk=7)],
         ))
+    
+    assert request.method == "POST"
     
     R = request.POST
     
     names = [name for name in R.getlist('name') if name]
-    return HttpResponse(', '.join(names))
     
-    students = set(
-        find_student(name) if not name.isdigit() else
-        get404(Student, pk=name)
-        for name in names)
+    try:
+        students = set(
+            find_student(name) if not name.isdigit() else
+            get404(Student, pk=name)
+            for name in names)
+    except Http404 as e:
+        return HttpResponseBadRequest(str(e))
     
     if not students:
         return HttpResponseBadRequest('must be at least one student')
@@ -50,15 +57,75 @@ def presence(request):
     date = R.get('date', timezone.now().date()) # or datetime, anyway string
     session = get404(Session, beg__startswith=date)
     
-    for student in students:
-        Presence.objects.create(student=student, session=session)
+    with transaction.atomic():
+        for student in students:
+            session.presents.add(student)
     
-    absents = set(
-        s for s in Student.objects.filter(normal_group=session.group)
-        if s not in students)
+    # exclude Students student where student is_present session
     
-    return HttpResponse('Created {} presences : <br/> {}, <br/> therefore {} absents : <br/>{}<br/>'.format(
+    absents = session.group.student_set.exclude(session=session)
+    presents = session.group.student_set.filter(session=session)
+    
+    return HttpResponse('''
+        <p>Les {} nouveaux présents ont été notés : {}</p>
+        <h1>Résumé de la session {}</h1>
+        <h2>Il y a {} absent(s) :</h2>
+        <ol>{}</ol>
+        <h2>Parmi les {} présent(s) :</h2>
+        <ol>{}</ol>
+        '''.format(
         len(students),
-        '<br />'.join(sorted(students, key=lambda x:x.get_full_name())),
-        len(absents),
-        '<br />'.join(sorted(absents, key=lambda x:x.get_full_name()))))
+        ', '.join(sorted(x.get_full_name() for x in students)),
+        session,
+        absents.count(),
+        ''.join(map("<li>{}</li>".format, sorted(x.get_full_name() for x in absents))),
+        presents.count(),
+        ''.join(map("<li>{}</li>".format, sorted(x.get_full_name() for x in presents))),
+    ))
+
+def see(request, date):
+    date = date.strip() or timezone.now().date()
+    try:
+        session = Session.objects.get(beg__startswith=date)
+    except Session.DoesNotExist:
+        session = Session.objects.filter(beg__lt=date).order_by('-beg')[0]
+    
+    return render(request, A('see_session.html'), dict(
+        session = session,
+        presents = session.group.student_set.filter(session=session),
+        absents = session.group.student_set.exclude(session=session),
+        additionals = session.presents.exclude(group=session.group),
+    ))
+
+def see(request, date):
+    date = date.strip() or timezone.now().date()
+    try:
+        session = Session.objects.get(beg__startswith=date)
+    except Session.DoesNotExist:
+        session = Session.objects.filter(beg__lt=date).order_by('-beg')[0]
+    
+    return render(request, A('see_session.html'), dict(
+        session = session,
+        presents = session.group.student_set.filter(session=session),
+        absents = session.group.student_set.exclude(session=session),
+        additionals = session.presents.exclude(group=session.group),
+    ))
+
+def feuille(request):
+    
+    groups = list(Group.objects.order_by('pk'))
+    sessions = [group.session_set.order_by('beg') for group in groups]
+    students = Student.objects.all().order_by('group', 'first_name', 'last_name')
+    
+    infos = [
+        [
+            (student in session.presents.all(), session)
+            for session in sessions[groups.index(student.group)]
+        ]
+        for student in students
+    ]
+    
+    return render(request, A('see_feuille.html'), dict(
+        session_list = list(zip(*sessions)),
+        student_list = list(zip(students, infos)),
+    ))

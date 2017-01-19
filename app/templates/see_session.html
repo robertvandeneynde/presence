@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Présences parascolaire</title>
+    </head>
+    <body>
+        <h1>Séance {{ session.beg }}</h1>
+        
+        <h2>Absents ({{ absents | length}}) :</h2>
+        
+        <table>
+        {% for s in absents %}
+            <tr>
+                <td>{{ s.first_name }}</td>
+                <td>{{ s.last_name }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        
+        <h2>Présents ({{ presents | length}})</h2>
+        
+        <table>
+        {% for s in presents %}
+            <tr>
+                <td>{{ s.first_name }}</td>
+                <td>{{ s.last_name }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        
+        <h2>Additionnels ({{ additionals | length}})</h2>
+        
+        <table>
+        {% for s in additionals %}
+            <tr>
+                <td>{{ s.first_name }}</td>
+                <td>{{ s.last_name }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        
+    </body>
+</html>

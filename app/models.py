@@ -1,7 +1,7 @@
 from django.db import models 
 from django.db.models import (Model,
     DateTimeField, IntegerField, ForeignKey,
-    CharField)
+    CharField, ManyToManyField)
 from django.contrib.auth.models import User
 
 def FK(cls):
@@ -14,15 +14,7 @@ class Group(Model):
     
     def __str__(self):
         return self.name
-    
-class Session(Model):
-    group = FK(Group)
-    beg = DateTimeField()
-    end = DateTimeField()
-    
-    def __str__(self):
-        return "{} {}".format(self.group(), self.beg.date())
-    
+
 class Student(User):
     group = FK(Group)
     classe = CharField(max_length=10)
@@ -30,9 +22,13 @@ class Student(User):
     def __str__(self):
         return self.get_full_name()
     
-class Presence(models.Model):
-    student = FK(Student)
-    session = FK(Session)
+class Session(Model):
+    group = FK(Group)
+    beg = DateTimeField()
+    end = DateTimeField()
+    
+    presents = ManyToManyField(Student)
     
     def __str__(self):
-        return "{} {}".format(self.student, self.session)
+        return "{} {}".format(self.group, self.beg.date())
+    

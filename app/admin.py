@@ -15,4 +15,4 @@ def add(cls, *disp):
 add(Group, 'year', 'name')
 add(Session, 'group', 'beg', 'end')
 add(Student, 'first_name', 'last_name', 'group', 'classe')
-add(Presence, 'student', 'session')
+# add(Presence, 'student', 'session')
