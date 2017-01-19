@@ -18,7 +18,8 @@ from django.conf.urls import include, url
 from . import views
 
 urlpatterns = [
-    url(r'^$', views.presence, name='presence'),
     url(r'^see/(.*)$', views.see, name='see'),
+    url(r'^mail/(.*)$', views.mail, name='feuille'),
     url(r'^feuille/$', views.feuille, name='feuille'),
+    url(r'^(\d\d\d\d-\d\d.*|)$', views.presence, name='presence'),
 ]

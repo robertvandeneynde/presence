@@ -3,9 +3,10 @@
     <head>
         <meta charset="utf-8" />
         <title>Présences parascolaire</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" /> 
     </head>
     <body>
-        <h1>Groupe {{ group.name }} - {{ date }}</h1>
+        <h1>Groupe {{ session.group.name }} - {{ session.beg }}</h1>
         
         <form method="post" action="">
         
@@ -30,7 +31,7 @@
         
         <p><input type="submit" /></p>
         
-        <p><input type="hidden" name="date" value="{{ date }}" /></p>
+        <p><input type="hidden" name="session_pk" value="{{ session.pk }}" /></p>
         
         </form>
         

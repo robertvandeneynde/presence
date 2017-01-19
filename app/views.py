@@ -2,6 +2,8 @@ from django.shortcuts import render, get_object_or_404 as get404
 from django.http import (HttpResponse,
     HttpResponseForbidden, HttpResponseBadRequest,
     HttpResponseRedirect, Http404)
+from django.core.mail import send_mail, EmailMessage, EmailMultiAlternatives
+
 
 from django.utils import timezone
 from django.db import transaction
@@ -21,18 +23,17 @@ def find_student(name):
             return x
     raise Http404('student not found: ' + name)
 
-def presence(request):
+def presence(request, session_search):
     if not request.user.is_staff:
         return HttpResponseForbidden('You must be admin')
     
     if request.method == "GET":
-        date = request.GET.get('date', timezone.now().date()) # or datetime, anyway string
+        date = session_search.strip() if session_search.strip() else str(timezone.now().date())
         session = get404(Session, beg__startswith=date)
         
         return render(request, A('presence.html'), dict(
-            group=session.group,
+            session=session,
             students=session.group.student_set.all().order_by('first_name', 'last_name'),
-            date=date,
             # name_of_group='Lundi',
             # students=[Student(first_name='marco', pk=2), Student(first_name='polo', pk=7)],
         ))
@@ -54,39 +55,35 @@ def presence(request):
     if not students:
         return HttpResponseBadRequest('must be at least one student')
     
-    date = R.get('date', timezone.now().date()) # or datetime, anyway string
-    session = get404(Session, beg__startswith=date)
+    session = get404(Session, pk=R['session_pk'])
     
     with transaction.atomic():
         for student in students:
             session.presents.add(student)
     
-    # exclude Students student where student is_present session
-    absents = session.group.student_set.exclude(session=session)
-    presents = session.group.student_set.filter(session=session)
-    
     return HttpResponse('''
-        <p>Les {} nouveaux présents ont été notés : {}</p>
-        <h1>Résumé de la session {}</h1>
-        <h2>Il y a {} absent(s) :</h2>
-        <ol>{}</ol>
-        <h2>Parmi les {} présent(s) :</h2>
-        <ol>{}</ol>
+      <!DOCTYPE html>
+      <html>
+        <head><meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+        <body>
+        <p>Les {0} nouveaux présents ont été notés : {1}</p>
+        <p><a href="/see/{2}">Voir la session du {2}</a></p>
+        <p><a href="/feuille/">Voir la feuille</a></p>
+        <p><a>Retour sur l'admin</a></p>
+        <p><a href="/admin/logout/">Se déconnecter</a></p>
+        </body>
+      </html>
         '''.format(
         len(students),
         ', '.join(sorted(x.get_full_name() for x in students)),
-        session,
-        absents.count(),
-        ''.join(map("<li>{}</li>".format, sorted(x.get_full_name() for x in absents))),
-        presents.count(),
-        ''.join(map("<li>{}</li>".format, sorted(x.get_full_name() for x in presents))),
+        str(session.beg.date()),
     ))
 
 def see(request, date):
     if not request.user.is_staff:
         return HttpResponseForbidden('You must be admin')
     
-    date = date.strip() or timezone.now().date()
+    date = date.strip() or str(timezone.now().date())
     try:
         session = Session.objects.get(beg__startswith=date)
     except Session.DoesNotExist:
@@ -98,6 +95,36 @@ def see(request, date):
         absents = session.group.student_set.exclude(session=session),
         additionals = session.presents.exclude(group=session.group),
     ))
+
+def mail(request, date):
+    if not request.user.is_staff:
+        return HttpResponseForbidden('You must be admin')
+    
+    date = date.strip() or str(timezone.now().date())
+    try:
+        session = Session.objects.get(beg__startswith=date)
+    except Session.DoesNotExist:
+        session = Session.objects.filter(beg__lt=date).order_by('-beg')[0]
+    
+    presents = session.group.student_set.filter(session=session)
+    absents = session.group.student_set.exclude(session=session)
+    additionals = session.presents.exclude(group=session.group)
+    
+    send_mail(
+        'Parascolaire Jeux Vidéos - Présences {} {:%d/%m/%Y}'.format(
+            session.group.name,
+            session.beg),
+        'Bonjour, voici les présences du Parascolaire Jeux Vidéos.\nGroupe {} Séance {:%d/%m/%Y}.\n\nAbsents ({}) :\n{}\n\nPrésents ({}) :\n{}\n\nÉlèves additionels ({}) :\n{}\n'.format(
+            session.group.name,
+            session.beg,
+            absents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in absents.order_by('last_name', 'first_name')),
+            presents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in presents.order_by('last_name', 'first_name')),
+            additionals.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in additionals.order_by('last_name', 'first_name')),),
+        'noreply@robertvandeneynde.be',
+        ['vanessafulvo@hotmail.com'],
+        fail_silently=False)
+    
+    return HttpResponse('Bien envoyé.')
 
 def feuille(request):
     if not request.user.is_staff:
