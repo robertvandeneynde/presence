@@ -12,7 +12,7 @@ from datetime import timedelta, datetime
 
 from .models import *
 
-# Create your views here.
+########### Create your views here.
 
 def A(x):
     return '' + x
@@ -68,8 +68,9 @@ def presence(request, session_search):
         <body>
         <p>Les {0} nouveaux présents ont été notés : {1}</p>
         <p><a href="/see/{2}">Voir la session du {2}</a></p>
+        <p><a href="/mail/{2}">Envoyer un email pour la session du {2}</a></p>
         <p><a href="/feuille/">Voir la feuille</a></p>
-        <p><a>Retour sur l'admin</a></p>
+        <p><a href="/admin">Admin</a></p>
         <p><a href="/admin/logout/">Se déconnecter</a></p>
         </body>
       </html>
@@ -89,7 +90,7 @@ def see(request, date):
     except Session.DoesNotExist:
         session = Session.objects.filter(beg__lt=date).order_by('-beg')[0]
     
-    return render(request, A('see_session.html'), dict(
+    return render(request, A('session.html'), dict(
         session = session,
         presents = session.group.student_set.filter(session=session),
         absents = session.group.student_set.exclude(session=session),
@@ -110,21 +111,20 @@ def mail(request, date):
     absents = session.group.student_set.exclude(session=session)
     additionals = session.presents.exclude(group=session.group)
     
-    send_mail(
-        'Parascolaire Jeux Vidéos - Présences {} {:%d/%m/%Y}'.format(
-            session.group.name,
-            session.beg),
-        'Bonjour, voici les présences du Parascolaire Jeux Vidéos.\nGroupe {} Séance {:%d/%m/%Y}.\n\nAbsents ({}) :\n{}\n\nPrésents ({}) :\n{}\n\nÉlèves additionels ({}) :\n{}\n'.format(
-            session.group.name,
-            session.beg,
-            absents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in absents.order_by('last_name', 'first_name')),
-            presents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in presents.order_by('last_name', 'first_name')),
-            additionals.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in additionals.order_by('last_name', 'first_name')),),
-        'noreply@robertvandeneynde.be',
-        ['vanessafulvo@hotmail.com'],
-        fail_silently=False)
+    head = 'Parascolaire Jeux Vidéos - Présences {} {:%d/%m/%Y}'.format(
+        session.group.name,
+        session.beg)
     
-    return HttpResponse('Bien envoyé.')
+    msg = 'Bonjour, voici les présences du Parascolaire Jeux Vidéos.\nGroupe {} Séance {:%d/%m/%Y}.\n\nAbsents ({}) :\n{}\n\nPrésents ({}) :\n{}\n\nÉlèves additionels ({}) :\n{}\n'.format(
+        session.group.name,
+        session.beg,
+        absents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in absents.order_by('last_name', 'first_name')),
+        presents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in presents.order_by('last_name', 'first_name')),
+        additionals.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in additionals.order_by('last_name', 'first_name')))
+    
+    send_mail(head, msg, 'noreply@robertvandeneynde.be', ['vanessafulvo@hotmail.com'], fail_silently=False)
+    
+    return HttpResponse('Bien envoyé. Contenu : <pre>{}</pre>'.format(msg))
 
 def feuille(request):
     if not request.user.is_staff:
@@ -142,7 +142,7 @@ def feuille(request):
         for student in students
     ]
     
-    return render(request, A('see_feuille.html'), dict(
+    return render(request, A('feuille.html'), dict(
         session_list = list(zip(*sessions)),
         student_list = list(zip(students, infos)),
     ))
