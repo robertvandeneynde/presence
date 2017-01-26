@@ -27,7 +27,7 @@ class Session(Model):
     beg = DateTimeField()
     end = DateTimeField()
     
-    presents = ManyToManyField(Student)
+    presents = ManyToManyField(Student, blank=True)
     
     def __str__(self):
         return "{} {}".format(self.group, self.beg.date())
