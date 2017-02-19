@@ -122,7 +122,7 @@ def mail(request, date):
         presents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in presents.order_by('last_name', 'first_name')),
         additionals.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in additionals.order_by('last_name', 'first_name')))
     
-    m = EmailMessage(head, msg, 'noreply@robertvandeneynde.be', ['vanessafulvo@hotmail.com'], reply_to=['robertvandeneynde@hotmail.com'])
+    m = EmailMessage(head, msg, 'noreply@robertvandeneynde.be', ['vanessafulvo@hotmail.com'], reply_to=['meessen.thomas@gmail.com'])
     m.send(fail_silently=False)
     
     return HttpResponse('Bien envoyé. Contenu : <pre>{}</pre>'.format(msg))
