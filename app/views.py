@@ -25,7 +25,7 @@ def find_student(name):
 
 def presence(request, session_search):
     if not request.user.is_staff:
-        return HttpResponseForbidden('You must be admin')
+        return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
     
     if request.method == "GET":
         date = session_search.strip() if session_search.strip() else str(timezone.now().date())
@@ -82,7 +82,7 @@ def presence(request, session_search):
 
 def see(request, date):
     if not request.user.is_staff:
-        return HttpResponseForbidden('You must be admin')
+        return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
     
     date = date.strip() or str(timezone.now().date())
     try:
@@ -99,7 +99,7 @@ def see(request, date):
 
 def mail(request, date):
     if not request.user.is_staff:
-        return HttpResponseForbidden('You must be admin')
+        return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
     
     date = date.strip() or str(timezone.now().date())
     try:
@@ -122,14 +122,14 @@ def mail(request, date):
         presents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in presents.order_by('last_name', 'first_name')),
         additionals.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in additionals.order_by('last_name', 'first_name')))
     
-    m = EmailMessage(head, msg, 'noreply@robertvandeneynde.be', ['vanessafulvo@hotmail.com'], reply_to=['meessen.thomas@gmail.com'])
+    m = EmailMessage(head, msg, 'noreply@robertvandeneynde.be', ['vanessafulvo@hotmail.com'], cc=['robertvandeneynde@hotmail.com', 'meessen.thomas@gmail.com'], reply_to=['meessen.thomas@gmail.com'])
     m.send(fail_silently=False)
     
     return HttpResponse('Bien envoyé. Contenu : <pre>{}</pre>'.format(msg))
 
 def feuille(request):
     if not request.user.is_staff:
-        return HttpResponseForbidden('You must be admin')
+        return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
     
     groups = list(Group.objects.order_by('pk'))
     sessions = [group.session_set.order_by('beg') for group in groups]
