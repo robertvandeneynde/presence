@@ -12,6 +12,8 @@ from datetime import timedelta, datetime
 
 from .models import *
 
+import textwrap
+
 ########### Create your views here.
 
 def A(x):
@@ -115,7 +117,18 @@ def mail(request, date):
         session.group.name,
         session.beg)
     
-    msg = 'Bonjour, voici les présences du Parascolaire Jeux Vidéos.\nGroupe {} Séance {:%d/%m/%Y}.\n\nAbsents ({}) :\n{}\n\nPrésents ({}) :\n{}\n\nÉlèves additionels ({}) :\n{}\n'.format(
+    msg = textwrap.dedent('''
+    Bonjour, voici les présences du Parascolaire Jeux Vidéos.
+    Groupe {} Séance {:%d/%m/%Y}.
+    
+    Absents ({}) :
+    {}
+    Présents ({}) :
+    {}
+    
+    Élèves additionels ({}) :
+    {}
+    ''').strip().format(
         session.group.name,
         session.beg,
         absents.count(), "\n".join("  {} {}".format(x.last_name, x.first_name) for x in absents.order_by('last_name', 'first_name')),
@@ -131,7 +144,7 @@ def feuille(request):
     if not request.user.is_staff:
         return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
     
-    groups = list(Group.objects.order_by('pk'))
+    groups = list(Group.objects.filter(year=2017).order_by('pk'))
     sessions = [group.session_set.order_by('beg') for group in groups]
     students = Student.objects.all().order_by('group', 'first_name', 'last_name')
     
