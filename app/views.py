@@ -20,10 +20,16 @@ def A(x):
     return '' + x
 
 def find_student(name):
+    res = None
     for x in Student.objects.all():
         if name.lower() in x.get_full_name().lower():
-            return x
-    raise Http404('student not found: ' + name)
+            if res:
+                raise Http404('multiple student for name ' + name)
+            res = x
+    if res:
+        return res
+    else:
+        raise Http404('student not found: ' + name)
 
 def presence(request, session_search):
     if not request.user.is_staff:
