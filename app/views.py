@@ -146,7 +146,7 @@ def feuille(request):
     
     groups = list(Group.objects.filter(year=2017).order_by('pk'))
     sessions = [group.session_set.order_by('beg') for group in groups]
-    students = Student.objects.all().order_by('group', 'first_name', 'last_name')
+    students = Student.objects.filter(group__year=2017).order_by('group', 'first_name', 'last_name')
     
     infos = [
         [
