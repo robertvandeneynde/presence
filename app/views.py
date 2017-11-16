@@ -60,8 +60,8 @@ def presence(request, session_search):
     except Http404 as e:
         return HttpResponseBadRequest(str(e))
     
-    if not students:
-        return HttpResponseBadRequest('must be at least one student')
+    # if not students:
+    #     return HttpResponseBadRequest('must be at least one student')
     
     session = get404(Session, pk=R['session_pk'])
     
