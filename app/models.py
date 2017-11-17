@@ -27,7 +27,7 @@ class Session(Model):
     beg = DateTimeField()
     end = DateTimeField()
     
-    presents = ManyToManyField(Student) # blank=True
+    presents = ManyToManyField(Student, blank=True) # blank such that when adding a Sesssion in the admin, one can write "0 presents"
     
     def __str__(self):
         return "{} {}".format(self.group, self.beg.date())
