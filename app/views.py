@@ -14,8 +14,6 @@ from .models import *
 
 import textwrap
 
-########### Create your views here.
-
 def A(x):
     return '' + x
 
@@ -169,3 +167,29 @@ def feuille(request):
         session_list = list(zip(*sessions)),
         student_list = list(zip(students, infos)),
     ))
+
+def mailing_list(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
+    
+    N = timezone.now()
+    year = N.year if N.month >= 9 else N.year-1
+    
+    mailing_lists = [
+        ('This year', Student.objects.filter(group__year=year)),
+        ('This year Mardi', Student.objects.filter(group__year=year, group__day=1)),
+        ('This year Jeudi', Student.objects.filter(group__year=year, group__day=3)),
+        ('Second year', Student.objects.filter(group__year=year).filter(other_year__isnull=False)),
+    ]
+    
+    return HttpResponse('<!DOCTYPE html><html> <head><meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" /></head> <body>{}</body></html>'.format(
+        ''.join(
+            '<h2>{}</h2><textarea>{}</textarea>'.format(
+                name,
+                ';\n'.join("{} <{}>".format(s.get_full_name(), s.email) for s in students))
+            for name, students in mailing_lists
+        )
+    ))
+    
+        
+    

@@ -21,5 +21,6 @@ urlpatterns = [
     url(r'^see/(.*)$', views.see, name='see'),
     url(r'^mail/(.*)$', views.mail, name='feuille'),
     url(r'^feuille/$', views.feuille, name='feuille'),
+    url(r'^mailing/$', views.mailing_list, name='mailing'),
     url(r'^(\d\d\d\d-\d\d.*|)$', views.presence, name='presence'),
 ]

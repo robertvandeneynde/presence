@@ -19,7 +19,7 @@ def add(cls, *disp, **kwargs):
 
 add(Group, '-year', 'name')
 add(Session, 'group', 'beg', 'end')
-add(Student, 'first_name', 'last_name', 'group', 'classe')
+add(Student, 'first_name', 'last_name', 'email', 'group', 'classe')
 # add(Presence, 'student', 'session')
 
 # admin.site.site_title = 'Gestion des présences au paracolaire'
