@@ -187,11 +187,14 @@ def mailing_list(request):
         <html>
             <head>
                 <meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" />
+            </head>
+            <body>
+                {{ body }}
                 <script>
                     var L = document.querySelectorAll('h2');
                     for(var i = 0; i < L.length; i++) {
                         L[i].addEventListener('click', function(event) {
-                            this.nextSibling.select();
+                            this.nextElementSibling.select();
 
                             try {
                                 var successful = document.execCommand('copy');
@@ -203,8 +206,7 @@ def mailing_list(request):
                         });
                     }
                 </script>
-            </head>
-            <body>{{ body }}</body>
+            </body>
         </html>
         '''.replace('{{ body }}',
         ''.join(
