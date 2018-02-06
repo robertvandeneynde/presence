@@ -29,6 +29,20 @@ def find_student(name):
     else:
         raise Http404('student not found: ' + name)
 
+def create_session_today(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
+    
+    N = timezone.now()
+    scholar_year = N.year if 9 <= N.month else N.year - 1
+    
+    session = Session.objects.create(
+        group=get404(Group, year=scholar_year, day=N.weekday()),
+        beg=N.replace(hour=12, minute=45, second=0, microsecond=0),
+        end=N.replace(hour=13, minute=45, second=0, microsecond=0))
+    
+    return HttpResponse('Ok, you can now take <a href="/">presences</a>')
+
 def presence(request, session_search):
     if not request.user.is_staff:
         return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
@@ -208,14 +222,13 @@ def mailing_list(request):
                 </script>
             </body>
         </html>
-        '''.replace('{{ body }}',
-        ''.join(
+        '''.replace('{{ body }}', ''.join(
             '<h2>{}</h2><textarea>{}</textarea>'.format(
                 name,
                 ';\n'.join("{} <{}>".format(s.get_full_name(), s.email) for s in students))
             for name, students in mailing_lists
-        )
-    ))
+        ))
+    )
     
         
     
