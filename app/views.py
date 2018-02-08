@@ -4,6 +4,7 @@ from django.http import (HttpResponse,
     HttpResponseRedirect, Http404)
 from django.core.mail import send_mail, EmailMessage, EmailMultiAlternatives
 
+from django.template import loader as TemplateLoader, Template, Context
 
 from django.utils import timezone
 from django.db import transaction
@@ -43,9 +44,43 @@ def create_session_today(request):
     
     return HttpResponse('Ok, you can now take <a href="/">presences</a>')
 
+def register_email(request):
+    
+    if request.method == 'GET':
+        
+        N = timezone.now()
+        year = N.year if N.month >= 9 else N.year-1
+        
+        mailing_lists = [
+            ('This year', Student.objects.filter(group__year=year)),
+            ('This year Mardi', Student.objects.filter(group__year=year, group__day=1)),
+            ('This year Jeudi', Student.objects.filter(group__year=year, group__day=3)),
+            ('Second year', Student.objects.filter(group__year=year).filter(other_year__isnull=False)),
+        ]
+        
+        return render(request, A('register_email.html'), {
+            'students': mailing_lists[0][1]
+        })
+    
+    assert request.method == 'POST'
+    
+    import re
+    RE = re.compile('email_(\d+)')
+    for k in request.POST.keys():
+        if RE.match(k) and request.POST[k].strip():
+            pk = RE.match(k).group(1)
+            mail = request.POST[k].strip()
+            student = get404(Student, pk=pk)
+            assert not student.email
+            student.email = mail
+            student.save()
+    
+    return HttpResponse('ok')
+            
 def presence(request, session_search):
     if not request.user.is_staff:
-        return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
+        return HttpResponseForbidden('''Clique <a href="/givemail">ici</a> pour me donner ton email (si tu ne l'as pas encore fait).''')
+        # return HttpResponseForbidden('You must be <a href="/admin">admin</a>')
     
     if request.method == "GET":
         date = session_search.strip() if session_search.strip() else str(timezone.now().date())
@@ -81,24 +116,24 @@ def presence(request, session_search):
         for student in students:
             session.presents.add(student)
     
-    return HttpResponse('''
+    return HttpResponse(Template('''
       <!DOCTYPE html>
       <html>
         <head><meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" /></head>
         <body>
-        <p>Les {0} nouveaux présents ont été notés : {1}</p>
-        <p><a href="/see/{2}">Voir la session du {2}</a></p>
-        <p><a href="/mail/{2}">Envoyer un email pour la session du {2}</a></p>
+        <p>Les {{ n }} nouveaux présents ont été notés : {{ names }}</p>
+        <p><a href="/see/{{date}}">Voir la session du {{date}}</a></p>
+        <p><a href="/mail/{{date}}">Envoyer un email pour la session du {{date}}</a></p>
         <p><a href="/feuille/">Voir la feuille</a></p>
         <p><a href="/admin">Admin</a></p>
         <p><a href="/admin/logout/">Se déconnecter</a></p>
         </body>
       </html>
-        '''.format(
-        len(students),
-        ', '.join(sorted(x.get_full_name() for x in students)),
-        str(session.beg.date()),
-    ))
+        ''').render(Context(dict(
+        n = len(students),
+        names = ', '.join(sorted(x.get_full_name() for x in students)),
+        date = str(session.beg.date()),
+    ))))
 
 def see(request, date):
     if not request.user.is_staff:
@@ -190,20 +225,31 @@ def mailing_list(request):
     year = N.year if N.month >= 9 else N.year-1
     
     mailing_lists = [
-        ('This year', Student.objects.filter(group__year=year)),
-        ('This year Mardi', Student.objects.filter(group__year=year, group__day=1)),
-        ('This year Jeudi', Student.objects.filter(group__year=year, group__day=3)),
-        ('Second year', Student.objects.filter(group__year=year).filter(other_year__isnull=False)),
+        {'name':'This year', 'students':Student.objects.filter(group__year=year)},
+        {'name':'This year Mardi', 'students':Student.objects.filter(group__year=year, group__day=1)},
+        {'name':'This year Jeudi', 'students':Student.objects.filter(group__year=year, group__day=3)},
+        {'name':'Second year', 'students':Student.objects.filter(group__year=year).filter(other_year__isnull=False)},
     ]
     
-    return HttpResponse('''
+    return HttpResponse(Template('''
         <!DOCTYPE html>
         <html>
             <head>
                 <meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <style>
+                textarea {
+                    width: 400px;
+                    height: 100px;
+                }
+                </style>
             </head>
             <body>
-                {{ body }}
+                {% for li in list %}
+                <h2>{{ li.name }}</h2>
+                <textarea>{% for s in li.students %}{{ s.get_full_name }} <{{ s.email }}>;
+{% endfor %}</textarea>
+                {% endfor %}
+                
                 <script>
                     var L = document.querySelectorAll('h2');
                     for(var i = 0; i < L.length; i++) {
@@ -222,13 +268,7 @@ def mailing_list(request):
                 </script>
             </body>
         </html>
-        '''.replace('{{ body }}', ''.join(
-            '<h2>{}</h2><textarea>{}</textarea>'.format(
-                name,
-                ';\n'.join("{} <{}>".format(s.get_full_name(), s.email) for s in students))
-            for name, students in mailing_lists
-        ))
-    )
-    
-        
+        ''').render(Context({
+            'list': mailing_lists
+        })))
     

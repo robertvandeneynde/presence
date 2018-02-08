@@ -19,6 +19,7 @@ from . import views
 
 urlpatterns = [
     url(r'^see/(.*)$', views.see, name='see'),
+    url(r'^givemail/$', views.register_email, name='register-email'),
     url(r'^create/$', views.create_session_today, name='create-session-today'),
     url(r'^mail/(.*)$', views.mail, name='feuille'),
     url(r'^feuille/$', views.feuille, name='feuille'),
